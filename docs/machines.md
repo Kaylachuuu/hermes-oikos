@@ -9,7 +9,7 @@ All on the 10.0.0.x network, on the Proxmox host, except Anubis.
 | Ollama | 10.0.0.21 | her mind | Tesla V100 16 GB (a 32 GB V100 to come) | Ollama (her model, `gemma4-64k`, kept resident; embeddings) |
 | Whisper | 10.0.0.22 | her ears | Quadro T1000 8 GB | faster-whisper in Docker, :9000 |
 | Kokoro | 10.0.0.23 | her voice | Quadro P1000 4 GB | Kokoro in Docker, :8880 |
-| Anubis | 10.1.0.98 | Kayla's workstation | | ComfyUI :8188 (her pictures, until the 32 GB card) and the fingerprint server :8189; Claude Code |
+| Anubis | 10.1.0.98 | Kayla's workstation | Intel Arc A770 16 GB (borrowed for her pictures) | ComfyUI :8188 (her pictures, until the 32 GB card) and the fingerprint server :8189; Claude Code |
 
 ## Replacing a drive on the host
 

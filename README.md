@@ -69,11 +69,12 @@ Intentions she holds, and reminders Kayla asks her to keep, labelled apart. Each
 person is talking to her, the conversation turns to its topic, or at her next quiet moment. Only what is due is
 shown; the whole horizon on request.
 
-### ★ Soma: her body ([hermes-soma](https://github.com/Kaylachuuu/hermes-soma), 0.1)
+### ★ Soma: her body ([hermes-soma](https://github.com/Kaylachuuu/hermes-soma), 0.2)
 
 The machines she runs on, read every 5 minutes from a small read-only agent on each (see
 [machines](docs/machines.md)): GPUs, load, memory, services, drives, ZFS pools. Learns her usual from the last week
-at each hour; tells her only symptoms, once, again if worse, and when they pass.
+at each hour; tells her only symptoms, once, again if worse, and when they pass. The GPU on Anubis that paints
+her pictures (an Intel Arc A770) is shown as borrowed, read from ComfyUI, and is never a symptom.
 
 ### Eikon: her pictures ([hermes-eikon](https://github.com/Kaylachuuu/hermes-eikon), 0.1)
 
