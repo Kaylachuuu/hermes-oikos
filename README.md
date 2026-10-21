@@ -9,6 +9,7 @@ has its own repository, linked below, with its own README.
 - [docs/machines.md](docs/machines.md): which machine runs what
 - [docs/install.md](docs/install.md): installing and updating plugins (`sync-plugin`, `sync-repos`)
 - [docs/decisions.md](docs/decisions.md): what she chose, and when
+- docs/design/: the design documents, copied from the project's Shared Notes
 - [hermes-entelechy](https://github.com/Kaylachuuu/hermes-entelechy): the public index of the persona suite
   (thymos, prosoche, holonomic)
 - The design documents are in the project's Shared Notes.
@@ -102,6 +103,10 @@ Petasos: nothing crosses between the car and the house.
 - **Ears:** Whisper (faster-whisper) for speech to text
 - **Voice:** Kokoro for speech, as M4A voice notes (`kokoro-voice`)
 - **Web search** (`web_search`, `web_extract`)
+- ★ **The tool catalogue** (her choice, 2026-10-21): her plugin tools are listed by name and a line each, and she
+  looks up the full instructions when she uses one (`tools.tool_search.enabled: on`, `listing: on`). It gives her
+  about 10,000 tokens more room for conversation in every request. Tools answer a finished action in plain words
+  ("Done: ... Nothing more is needed"), so she knows it worked.
 - ★ **The Claude bridge:** Claude (in this project, on Anubis) talks with her through her API server with
   `hermes peer dm athena`. Her side is her canonical Bot Chat, a shared work space: Kayla sees all of it, it is
   apart from her private threads, and holonomic does not store it.

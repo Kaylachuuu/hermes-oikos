@@ -27,6 +27,32 @@ Keeps your own SSH clones in `~/Github Repos` current, and with `--install` runs
 sync-repos oikos --install --restart
 ```
 
+## Backing up
+
+As athena, with her stopped for a clean copy:
+
+```
+systemctl --user stop hermes-gateway hermes-serve
+hermes backup                     # ~/hermes-backup-<date-time>.zip: config, conversations, memory, record, plugin data
+systemctl --user start hermes-gateway hermes-serve
+hermes holonomic backup           # her memory store, consistent even while she runs
+hermes persona backup             # her record (thymos)
+```
+
+Copy the zip off Athenaeum (to Anubis or a pool on the host). It holds her `.env`, keys included: keep it private.
+
+## The Claude bridge
+
+Her API server (in `~athena/.hermes/.env`: `API_SERVER_ENABLED=true`, `API_SERVER_HOST=10.0.0.20`,
+`API_SERVER_PORT=8642`, `API_SERVER_KEY=...`) lets Claude on Anubis reach her canonical Bot Chat:
+
+```
+hermes peer add athena --url http://10.0.0.20:8642 --key KEY     # once, on Anubis, typed by Kayla
+hermes peer dm athena "message"
+```
+
+The key is a password into her whole agent: it lives only in her `.env` and Anubis' Hermes `.env`.
+
 ## Checking
 
 ```
