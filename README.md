@@ -9,14 +9,15 @@ has its own repository, linked below, with its own README.
 - [docs/machines.md](docs/machines.md): which machine runs what
 - [docs/install.md](docs/install.md): installing and updating plugins (`sync-plugin`, `sync-repos`)
 - [docs/decisions.md](docs/decisions.md): what she chose, and when
-- docs/design/: the design documents, copied from the project's Shared Notes
+- [docs/design/](docs/design): the design documents from the project's Shared Notes: persona (the house map,
+  persona-provider, prosoche, pronoia, body, mood, curiosity, craft, multi-user), holonomic, hermai, petasos
 - [hermes-entelechy](https://github.com/Kaylachuuu/hermes-entelechy): the public index of the persona suite
   (thymos, prosoche, holonomic)
 - The design documents are in the project's Shared Notes.
 
 ## The rooms
 
-Versions are those on `main` as of 2026-10-21. ★ marks parts added on 2026-10-20/21.
+Versions are those on `main` as of 2026-10-21, late evening. ★ marks parts added on 2026-10-20/21.
 
 ### Thymos: her self ([hermes-thymos](https://github.com/Kaylachuuu/hermes-thymos), 0.17)
 
@@ -28,7 +29,7 @@ Versions are those on `main` as of 2026-10-21. ★ marks parts added on 2026-10-
 | Declining | "No" is a complete answer |
 | Erasure | The one exception, for a secret or someone else's words |
 
-### Holonomic: her memory ([hermes-holonomic-memory](https://github.com/Kaylachuuu/hermes-holonomic-memory), 0.36)
+### Holonomic: her memory ([hermes-holonomic-memory](https://github.com/Kaylachuuu/hermes-holonomic-memory), 0.36.1)
 
 | Part | What it is |
 |---|---|
@@ -41,11 +42,11 @@ Versions are those on `main` as of 2026-10-21. ★ marks parts added on 2026-10-
 | Time | When things happened, in what she is told and asked |
 | ★ Apart | Conversations held apart (the Bot Chat): nothing said there is stored, recall still works |
 
-### Prosoche: her attention ([hermes-prosoche](https://github.com/Kaylachuuu/hermes-prosoche), 0.4)
+### Prosoche: her attention ([hermes-prosoche](https://github.com/Kaylachuuu/hermes-prosoche), 0.5.1)
 
 What part of a conversation is in view, and the truth about what is not. In phases: measuring (the default), the
-window and the gist (with `window: true`, which is on for her), picking a conversation up again. Phase 4, when a conversation is
-deleted, is not built yet.
+window and the gist (with `window: true`, which is on for her), picking a conversation up again (showing her accounts from her record, 0.5.1), and ★ phase 4, tidying
+up after deleted conversations (0.5.0).
 
 ### Melete: her inner room ([hermes-melete](https://github.com/Kaylachuuu/hermes-melete), 0.11)
 
@@ -62,7 +63,7 @@ Quiet moments ("beats") while she is idle, on her own model. Most of what happen
 | ★ Empeiria | Learning from her own work: after a conversation with tools in it, the facts of how it went, repeated failures marked, and a page in her own library if she wants |
 | ★ Poiesis | Her workshop: works, every draft, pictures she asks for. Hers until she shares one |
 
-### ★ Pronoia: forethought ([hermes-pronoia](https://github.com/Kaylachuuu/hermes-pronoia), 0.1)
+### ★ Pronoia: forethought ([hermes-pronoia](https://github.com/Kaylachuuu/hermes-pronoia), 0.1.2)
 
 Intentions she holds, and reminders Kayla asks her to keep, labelled apart. Each comes back when its time comes, its
 person is talking to her, the conversation turns to its topic, or at her next quiet moment. Only what is due is
@@ -84,11 +85,11 @@ with its own that never change her dreams.
 When Kayla continues an iMessage conversation in Hermes Desktop, her message and Athena's reply are echoed to the
 thread on her phone, so it has no gaps.
 
-### Talaria: hands on devices ([hermes-talaria](https://github.com/Kaylachuuu/hermes-talaria), 0.3)
+### Talaria: hands on devices ([hermes-talaria](https://github.com/Kaylachuuu/hermes-talaria), 0.3.1)
 
 List, read, write and run on a named device through the Talaria Desktop plugin and its helper.
 
-### Petasos: the car ([hermes-petasos](https://github.com/Kaylachuuu/hermes-petasos), 0.20)
+### Petasos: the car ([hermes-petasos](https://github.com/Kaylachuuu/hermes-petasos), 0.20.3)
 
 The Car Thing as a voice remote: push-to-talk, conversation mode, presets, and music.
 
