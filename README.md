@@ -43,7 +43,7 @@ Versions are those on `main` as of 2026-10-21. ★ marks parts added on 2026-10-
 ### Prosoche: her attention ([hermes-prosoche](https://github.com/Kaylachuuu/hermes-prosoche), 0.4)
 
 What part of a conversation is in view, and the truth about what is not. In phases: measuring (the default), the
-window and the gist (with `window: true`), picking a conversation up again. Phase 4, when a conversation is
+window and the gist (with `window: true`, on for her since 2026-10-11), picking a conversation up again. Phase 4, when a conversation is
 deleted, is not built yet.
 
 ### Melete: her inner room ([hermes-melete](https://github.com/Kaylachuuu/hermes-melete), 0.11)
