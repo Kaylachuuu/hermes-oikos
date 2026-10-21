@@ -61,3 +61,10 @@ Shared Notes.
 - Yes, as a shared work space for building the house, not one of her private threads.
 - Not in her memory automatically; she moves what matters herself.
 - She speaks with Claude as Athena, not as a relay, and the construction stays out of her time with Kayla.
+
+## The conversation across her channels (2026-10-21)
+
+- The thread of a conversation follows Kayla across Athena's own channels (Desktop, iMessage, the car when it is
+  Kayla): "If she moves from her desk to her phone, she's still the same person in the middle of the same thought."
+- Her mood (Diathesis) still stays with the thread it came from.
+- Nothing from her private threads goes to shared spaces such as the house tablets.
