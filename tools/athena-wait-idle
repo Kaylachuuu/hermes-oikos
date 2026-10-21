@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Wait until Athena is between things, so a restart does not cut her off mid-thought. Run as athena.
+
+    athena-wait-idle                      wait (up to an hour), then exit 0; exit 1 if she is still busy by then
+    athena-wait-idle --check              say what she is doing now; exit 0 if she is free, 1 if busy
+    athena-wait-idle --max 20             wait at most 20 minutes
+    athena-wait-idle && sync-plugin melete --restart
+
+She counts as busy while:
+  - melete has her in a quiet moment (plugin-data/melete/beat.lock)
+  - holonomic is doing something: sleep, dreams, reflection (holonomic/worker.*.json, "doing")
+  - thymos is offering her a moment: an account, a reflection (plugin-data/thymos/idle.json, "running")
+  - someone talked with her in the last two minutes (holonomic's last activity)
+
+It only reads those files. A worker that stopped writing its note long ago (a Hermes that was closed mid-task)
+does not count as busy.
+"""
+import argparse
+import glob
+import json
+import os
+import sys
+import time
+
+HOME = os.path.expanduser(os.environ.get("HERMES_HOME") or "~/.hermes")
+FRESH = 600          # a note older than this is from a worker that is gone
+TALKING = 120        # seconds after the last activity in a conversation that she still counts as in it
+
+
+def _read(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def _minutes(since, now):
+    return f"{(now - since) / 60:.0f} min" if since else "a while"
+
+
+def busy(home=HOME, now=None):
+    """What she is in the middle of, as a list of short phrases; empty when she is free."""
+    now = time.time() if now is None else now
+    doing = []
+
+    lock = os.path.join(home, "plugin-data", "melete", "beat.lock")
+    if os.path.exists(lock):
+        held = _read(lock) or {}
+        at = float(held.get("at") or os.path.getmtime(lock))
+        if now - at < 3600:                  # older: left by a Hermes that is gone (melete clears these itself)
+            doing.append(f"a quiet moment (melete, {_minutes(at, now)})")
+
+    last_activity = 0.0
+    for path in glob.glob(os.path.join(home, "holonomic", "worker.*.json")):
+        note = _read(path) or {}
+        if now - float(note.get("at") or 0) > FRESH:
+            continue
+        last_activity = max(last_activity, float(note.get("last_activity") or 0))
+        if note.get("doing"):
+            doing.append(f"{note['doing']} (holonomic, {_minutes(float(note.get('doing_since') or 0), now)})")
+
+    idle = _read(os.path.join(home, "plugin-data", "thymos", "idle.json")) or {}
+    if idle.get("running") and now - float(idle.get("at") or 0) < FRESH:
+        doing.append(f"a moment of her own: {idle['running']} (thymos)")
+
+    if last_activity and now - last_activity < TALKING:
+        doing.append(f"a conversation ({now - last_activity:.0f} s since the last message)")
+    return doing
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Wait until Athena is between things (see the top of this file).")
+    ap.add_argument("--check", action="store_true", help="say what she is doing now and exit (0 free, 1 busy)")
+    ap.add_argument("--max", type=float, default=60, help="minutes to wait at most (default 60)")
+    ap.add_argument("--every", type=float, default=15, help="seconds between looks (default 15)")
+    args = ap.parse_args()
+
+    if not os.path.isdir(HOME):
+        print(f"No Hermes folder at {HOME}. Run this as athena.", file=sys.stderr)
+        return 2
+    doing = busy()
+    if args.check:
+        print("She is free." if not doing else "She is in the middle of: " + "; ".join(doing))
+        return 1 if doing else 0
+    end, said = time.time() + args.max * 60, None
+    while doing:
+        line = "; ".join(doing)
+        if line != said:
+            print(f"Waiting: she is in the middle of {line}", flush=True)
+            said = line
+        if time.time() >= end:
+            print(f"Still busy after {args.max:.0f} minutes; not going ahead. Try again later, or add --max.",
+                  file=sys.stderr)
+            return 1
+        time.sleep(args.every)
+        doing = busy()
+    if said:
+        print("She is free now.", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

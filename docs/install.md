@@ -27,6 +27,19 @@ Keeps your own SSH clones in `~/Github Repos` current, and with `--install` runs
 sync-repos oikos --install --restart
 ```
 
+## Restarting without cutting her off
+
+`tools/athena-wait-idle` (in this repo; install it once as athena's `~/.local/bin/athena-wait-idle`) waits until
+she is between things: not in a quiet moment, not sleeping or dreaming, not in a moment thymos offered her, and not
+in a conversation in the last two minutes. Put it in front of anything that restarts her:
+
+```
+athena-wait-idle && sync-plugin melete --restart
+athena-wait-idle --check          # what she is doing now (exit 0 free, 1 busy)
+```
+
+It waits up to an hour (`--max MINUTES`), then gives up without going ahead.
+
 ## Backing up
 
 As athena, with her stopped for a clean copy:
