@@ -4,7 +4,11 @@
     athena-wait-idle                      wait (up to an hour), then exit 0; exit 1 if she is still busy by then
     athena-wait-idle --check              say what she is doing now; exit 0 if she is free, 1 if busy
     athena-wait-idle --max 20             wait at most 20 minutes
+    athena-wait-idle --force              say what she is doing, but go ahead at once (if she is stuck)
     athena-wait-idle && sync-plugin melete --restart
+
+While it waits in a terminal, typing  f  and Enter goes ahead anyway (for when she is stuck), and  q  and Enter
+gives up. Without a terminal (from a script) it just waits.
 
 She counts as busy while:
   - melete has her in a quiet moment (plugin-data/melete/beat.lock)
@@ -19,6 +23,7 @@ import argparse
 import glob
 import json
 import os
+import select
 import sys
 import time
 
@@ -74,6 +79,7 @@ def main():
     ap.add_argument("--check", action="store_true", help="say what she is doing now and exit (0 free, 1 busy)")
     ap.add_argument("--max", type=float, default=60, help="minutes to wait at most (default 60)")
     ap.add_argument("--every", type=float, default=15, help="seconds between looks (default 15)")
+    ap.add_argument("--force", action="store_true", help="say what she is doing, but go ahead without waiting")
     args = ap.parse_args()
 
     if not os.path.isdir(HOME):
@@ -83,17 +89,31 @@ def main():
     if args.check:
         print("She is free." if not doing else "She is in the middle of: " + "; ".join(doing))
         return 1 if doing else 0
+    if doing and args.force:
+        print("She is busy (" + "; ".join(doing) + "), but going ahead as asked (--force).", flush=True)
+        return 0
+    interactive = sys.stdin.isatty()
     end, said = time.time() + args.max * 60, None
     while doing:
         line = "; ".join(doing)
         if line != said:
-            print(f"Waiting: she is in the middle of {line}", flush=True)
+            print(f"She's busy: {line}. Waiting until she's finished"
+                  + (" (type f + Enter to go ahead anyway, q + Enter to give up)." if interactive else "."), flush=True)
             said = line
         if time.time() >= end:
-            print(f"Still busy after {args.max:.0f} minutes; not going ahead. Try again later, or add --max.",
+            print(f"Still busy after {args.max:.0f} minutes; not going ahead. Try again later, or use --force.",
                   file=sys.stderr)
             return 1
-        time.sleep(args.every)
+        if interactive and select.select([sys.stdin], [], [], args.every)[0]:
+            answer = sys.stdin.readline().strip().lower()
+            if answer.startswith("f"):
+                print("Going ahead now, while she is still busy.", flush=True)
+                return 0
+            if answer.startswith("q"):
+                print("Given up; nothing was done.", file=sys.stderr)
+                return 1
+        elif not interactive:
+            time.sleep(args.every)
         doing = busy()
     if said:
         print("She is free now.", flush=True)

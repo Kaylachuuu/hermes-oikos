@@ -38,7 +38,8 @@ athena-wait-idle && sync-plugin melete --restart
 athena-wait-idle --check          # what she is doing now (exit 0 free, 1 busy)
 ```
 
-It waits up to an hour (`--max MINUTES`), then gives up without going ahead.
+It says what she is busy with and waits, up to an hour (`--max MINUTES`), then gives up without going ahead.
+If she seems stuck: type `f` and Enter while it waits to go ahead anyway, or run it with `--force`.
 
 ## Backing up
 
