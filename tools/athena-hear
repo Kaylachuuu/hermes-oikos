@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Hearing for Athena: the words of a voice note, and how they were said, from her own model.
+
+A speech-to-text command for Hermes. Gemma 4 hears sound itself (pitch, pacing, emphasis), not a transcript, so
+it can say how something was said as well as what. Whisper stays as the fallback: if the model cannot be reached
+or gives nothing, the note is transcribed by Whisper as before, without the tone.
+
+    athena-hear INPUT OUTPUT          write what was said (and how) to OUTPUT
+    athena-hear --try INPUT           print it instead, to try a recording by hand
+
+In Hermes' config.yaml (as athena), with this file in ~/.local/bin:
+
+    stt:
+      provider: athena-hear
+      providers:
+        athena-hear:
+          type: command
+          command: /home/athena/.local/bin/athena-hear {input_path} {output_path}
+          timeout: 240
+
+Settings are environment variables, all optional:
+    ATHENA_HEAR_OLLAMA    her model's server (default http://10.0.0.21:11434)
+    ATHENA_HEAR_MODEL     the model that hears (default gemma4-64k:latest)
+    ATHENA_HEAR_WHISPER   the fallback (default http://10.0.0.22:9000/v1, model Systran/faster-whisper-small)
+    ATHENA_HEAR_FORMAT    how the tone is given to her; {words} and {tone} (default below, FORMAT)
+
+The audio is cut into pieces of at most 30 seconds (the model hears 30 to 60 seconds at a time), at pauses where it
+can, so no word is cut in two; each piece is heard on its own and the words are joined. How it was said is taken
+from pieces long enough to tell (8 seconds or more). Needs ffmpeg and Python 3; nothing else.
+"""
+import base64
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+import uuid
+
+OLLAMA = os.environ.get("ATHENA_HEAR_OLLAMA", "http://10.0.0.21:11434").rstrip("/")
+MODEL = os.environ.get("ATHENA_HEAR_MODEL", "gemma4-64k:latest")
+WHISPER = os.environ.get("ATHENA_HEAR_WHISPER", "http://10.0.0.22:9000/v1").rstrip("/")
+WHISPER_MODEL = os.environ.get("ATHENA_HEAR_WHISPER_MODEL", "Systran/faster-whisper-small")
+FORMAT = os.environ.get("ATHENA_HEAR_FORMAT", "{words}\n[How it was said: {tone}]")
+PIECE = 30          # seconds of audio per piece, at most
+MIN_TONE = 8        # a piece shorter than this is too short to judge the tone from
+
+PROMPT = ("Listen to this audio. First write exactly the words spoken, nothing added. Mark audible pauses as "
+          "(pause) and sounds that are not words as (laughs), (sighs) and the like. Then, on a new line beginning "
+          "with TONE:, say in at most 20 words how it was said: the mood, energy and emphasis you hear in the "
+          "voice. Judge that from the sound of the voice, not from what the words mean. If you cannot tell, "
+          "write TONE: unclear.")
+
+
+def ffmpeg():
+    found = shutil.which("ffmpeg")
+    if not found:
+        raise RuntimeError("ffmpeg is not installed")
+    return found
+
+
+def cuts(duration, pauses, longest=PIECE):
+    """Where to cut audio of `duration` seconds so no piece is longer than `longest`: at the middle of the last
+    pause before each limit, or at the limit itself when there is no pause to cut at."""
+    out, start = [], 0.0
+    while duration - start > longest:
+        limit = start + longest
+        inside = [(a + b) / 2 for a, b in pauses if start + 5 < (a + b) / 2 <= limit]
+        cut = inside[-1] if inside else limit
+        out.append(cut)
+        start = cut
+    return out
+
+
+def pieces(path, workdir):
+    """The audio as 16 kHz mono WAV files of at most PIECE seconds each, in order, cut at pauses."""
+    whole = os.path.join(workdir, "whole.wav")
+    run = subprocess.run([ffmpeg(), "-hide_banner", "-nostats", "-y", "-i", path, "-ac", "1", "-ar", "16000",
+                          "-af", "silencedetect=noise=-35dB:d=0.25", "-c:a", "pcm_s16le", whole],
+                         check=True, timeout=120, capture_output=True, text=True)
+    starts = [float(x) for x in re.findall(r"silence_start: ([\d.]+)", run.stderr)]
+    ends = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", run.stderr)]
+    duration = (os.path.getsize(whole) - 44) / 32000                # 16 kHz, 16-bit mono
+    marks = [0.0] + cuts(duration, list(zip(starts, ends))) + [duration]
+    out = []
+    for i, (a, b) in enumerate(zip(marks, marks[1:])):
+        piece = os.path.join(workdir, f"piece-{i:03d}.wav")
+        subprocess.run([ffmpeg(), "-v", "error", "-y", "-i", whole, "-ss", f"{a:.2f}", "-to", f"{b:.2f}",
+                        "-c:a", "pcm_s16le", piece], check=True, timeout=60)
+        if os.path.getsize(piece) > 16000:                          # half a second or more
+            out.append((piece, b - a))
+    return out
+
+
+def hear(wav):
+    """(words, tone) for one piece, from the model."""
+    body = {"model": MODEL, "stream": False, "think": False,
+            "options": {"temperature": 0, "num_predict": 600},
+            "messages": [{"role": "system", "content": PROMPT},
+                         {"role": "user", "content": "The audio:",
+                          "images": [base64.b64encode(open(wav, "rb").read()).decode()]}]}
+    req = urllib.request.Request(f"{OLLAMA}/api/chat", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=90) as r:
+        text = (json.load(r).get("message") or {}).get("content", "").strip()
+    words, _, tone = text.partition("TONE:")
+    words = words.replace("Listen to this audio.", "").replace("The audio:", "").strip().strip('"')
+    tone = " ".join(tone.split()).rstrip(".")
+    if words.lower().startswith(("i am unable", "i can't", "i cannot", "i'm unable")):
+        raise RuntimeError(f"the model did not hear it: {words[:80]}")
+    return words, (tone if tone and tone.lower() != "unclear" else "")
+
+
+def whisper(path):
+    """Whisper's transcript of the whole note: the fallback, words only."""
+    boundary = uuid.uuid4().hex
+    data = open(path, "rb").read()
+    parts = [f'--{boundary}\r\nContent-Disposition: form-data; name="model"\r\n\r\n{WHISPER_MODEL}\r\n'.encode(),
+             f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{os.path.basename(path)}"\r\n'
+             f'Content-Type: application/octet-stream\r\n\r\n'.encode() + data + b"\r\n",
+             f"--{boundary}--\r\n".encode()]
+    req = urllib.request.Request(f"{WHISPER}/audio/transcriptions", data=b"".join(parts),
+                                 headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    with urllib.request.urlopen(req, timeout=180) as r:
+        body = r.read().decode("utf-8", "replace")
+    try:
+        return json.loads(body).get("text", "").strip()
+    except ValueError:
+        return body.strip()
+
+
+def transcribe(path):
+    try:
+        with tempfile.TemporaryDirectory(prefix="athena-hear-") as work:
+            heard = [(hear(p), seconds) for p, seconds in pieces(path, work)]
+        words = " ".join(w for (w, _), _ in heard if w).strip()
+        if not words:
+            raise RuntimeError("nothing was heard")
+        tones = [t for (_, t), seconds in heard if t and (seconds >= MIN_TONE or len(heard) == 1)]
+        if not tones:
+            return words
+        tone = tones[0] if len(tones) == 1 else "; then ".join(tones)
+        return FORMAT.format(words=words, tone=tone)
+    except Exception as e:  # noqa: BLE001 - anything that stops her model hearing it: Whisper hears it instead
+        print(f"athena-hear: her model could not hear this ({e}); using Whisper", file=sys.stderr)
+        return whisper(path)
+
+
+def main(argv):
+    if len(argv) == 3 and argv[1] == "--try":
+        print(transcribe(argv[2]))
+        return 0
+    if len(argv) != 3:
+        print(__doc__.split("\n\n")[1], file=sys.stderr)
+        return 2
+    text = transcribe(argv[1])
+    with open(argv[2], "w", encoding="utf-8") as f:
+        f.write(text + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
